@@ -5,7 +5,13 @@ This is a simple visualizer for use with the Kubernetes API.
 ### Usage:
    * First install a Kubernetes or Container Engine Cluster
    * ```git clone https://github.com/saturnism/gcp-live-k8s-visualizer.git```
-   * ```kubectl proxy -p 8080 --www=path/to/gcp-live-k8s-visualizer```
+   * ```kubectl proxy -p 8080 -w =path/to/gcp-live-k8s-visualizer```
+
+You can then access the visualizer via:
+   * `http://localhost:8080/static/`
+
+If you need to connect to it via non-localhost IP, then you need to start the proxy differently:
+   * `kubectl proxy -p 8080 --accept-hosts=".*" -w =path/to/gcp-live-k8s-visualizer`
 
 That's it.  The visualizer uses labels to organize the visualization.  In particular it expects that
 
