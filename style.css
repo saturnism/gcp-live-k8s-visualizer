@@ -15,10 +15,19 @@
 .pod {
   width: 100px;
   background-color:#eeeeef;
+  margin-bottom: 40px;
 }
 
 .pending {
   background-color:yellow;
+}
+
+.failed {
+  background-color: red;
+}
+
+.unknown {
+  background-color: gray;
 }
 
 .window {

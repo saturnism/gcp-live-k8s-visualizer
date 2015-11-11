@@ -18,3 +18,7 @@ That's it.  The visualizer uses labels to organize the visualization.  In partic
    * pods, replicationcontrollers, and services have a ```name``` label, and pods and their associated replication controller share the same ```name```, and
    * the pods in your cluster will have a ```uses``` label which contains a underscore separated list of services that the pod uses.
    * resources that you want to show in the visualizer should have ```visualize``` label set to the value ```true```
+
+### Using Grunt
+To use Grunt while developing, run `npm install` and then run `grunt serve`.
+Change the `connect.proxies.host` and/or `connect.proxies.port` in the Gruntfile to reflect the hostname of the Kubernetes API
