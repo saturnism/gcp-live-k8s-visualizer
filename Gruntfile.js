@@ -54,11 +54,9 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.registerTask('serve', function (target) {
-        grunt.task.run([
-            'configureProxies',
-            'connect:livereload',
-            'watch'
-        ]);
-    });
+    grunt.registerTask('serve', [
+        'configureProxies',
+        'connect:livereload',
+        'watch'
+    ]);
 };
