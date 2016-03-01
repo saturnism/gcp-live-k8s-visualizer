@@ -38,9 +38,7 @@ var insertByName = function(index, value) {
   if (!value || !value.metadata.labels || !value.metadata.name) {
     return;
   }
-  // console.log("type = " + value.type + " labels = " + value.metadata.name);
-  //	var list = groups[value.metadata.name];
-  var key = value.metadata.labels.name;
+  var key = value.metadata.labels.run;
 	var list = groups[key];
 	if (!list) {
 		list = [];
@@ -69,14 +67,12 @@ var connectControllers = function() {
     connectUses();
 	for (var i = 0; i < controllers.items.length; i++) {
 		var controller = controllers.items[i];
-    //console.log("controller: " + controller.metadata.name)
 		for (var j = 0; j < pods.items.length; j++) {
 			var pod = pods.items[j];
-			if (pod.metadata.labels.name == controller.metadata.labels.name) {
+			if (pod.metadata.labels.run == controller.metadata.labels.run) {
         if (controller.metadata.labels.version && pod.metadata.labels.version && (controller.metadata.labels.version != pod.metadata.labels.version)) {
           continue;
         }
-        //console.log('connect controller: ' + 'controller-' + controller.metadata.name + ' to pod-' + pod.metadata.name);
 				jsPlumb.connect({
 					source: 'controller-' + controller.metadata.name,
 					target: 'pod-' + pod.metadata.name,
@@ -128,7 +124,7 @@ var connectUses = function() {
 		colorIx++;
 		if (colorIx >= colors.length) { colorIx = 0;};
 		$.each(pods.items, function(i, pod) {
-        var podKey = pod.metadata.labels.name;
+        var podKey = pod.metadata.labels.run;
          //console.log('connect uses key: ' +key + ', ' + podKey);
 			if (podKey == key) {
 				$.each(list, function(j, serviceId) {
@@ -295,7 +291,7 @@ var loadData = function() {
 		$.each(data.items, function(key, val) {
     	val.type = 'pod';
       if (val.metadata.labels && val.metadata.labels.uses) {
-      	var key = val.metadata.labels.name;
+      	var key = val.metadata.labels.run;
 		    if (!uses[key]) {
 			  	uses[key] = val.metadata.labels.uses.split("_");
 		    } else {
