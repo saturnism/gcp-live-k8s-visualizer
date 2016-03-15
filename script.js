@@ -137,7 +137,8 @@ var connectUses = function() {
 			//console.log('connect uses key: ' +key + ', ' + podKey);
 			if (podKey == key) {
 				$.each(list, function(j, serviceId) {
-				//console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
+			            //console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
+			            if   ($('#service-' + serviceId).length != 0 ){ 
 					instance.connect(
 					{
 						source: 'pod-' +  pod.metadata.name,
@@ -154,6 +155,12 @@ var connectUses = function() {
     						[ "Arrow", { width:15, length:30, location: 1}],
     					],
 					});
+
+
+
+                                    }else{
+                                     console.log('Could not connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId + " Are you using meta.label.name of the service as the uses label?");
+                                    }
 				});
 			}
 		});
