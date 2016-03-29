@@ -125,3 +125,9 @@
 .terminating {
   background-color: red;
 }
+
+#group-names{
+ float:right;
+ padding-right:5%;
+}
+

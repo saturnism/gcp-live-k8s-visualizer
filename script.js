@@ -38,11 +38,14 @@ var timeoutFunction;
 var repainting = false;
 
 var insertByNameOrType = function(index, value) {
-
   if (!value || !value.metadata.labels || !value.metadata.name) {
     return;
   }
   var key = getNodeKey(value);
+  addGroupName(key);
+  if (!isVisibleGroup(key)){
+   return;
+  }
   var list = groups[key];
   if (!list) {
 		list = [];
@@ -50,6 +53,24 @@ var insertByNameOrType = function(index, value) {
   }
   list.push(value);
 };
+
+function isVisibleGroup(key){
+  if ($("input#"+key).length != 0 && $("input#"+key).prop("checked") ){
+    return true;
+  }
+  return false;
+}
+
+function clearGroupNames(){
+	$("group-names").clear();
+}
+
+
+function addGroupName(groupName){
+     if ($("input#"+groupName).length == 0){
+       $("#group-names").append("<input type=\"checkbox\" checked=\"checked\" name=\"availableGroups\" id=\""+groupName +"\">"+groupName+"");	
+    }
+}
 
 function getNodeKey(itemNode){
 	return (itemNode.metadata.labels.type ? itemNode.metadata.labels.type : itemNode.metadata.labels.name);
@@ -78,7 +99,7 @@ var connectControllers = function() {
 		//console.log("controller: " + controller.metadata.name)
 		for (var j = 0; j < pods.items.length; j++) {
 			var pod = pods.items[j];
-			if (getNodeKey(pod) == getNodeKey(controller)) {
+			if (isVisibleGroup(getNodeKey(pod)) && getNodeKey(pod) == getNodeKey(controller)) {
 				if (controller.metadata.labels.version && pod.metadata.labels.version && (controller.metadata.labels.version != pod.metadata.labels.version)) {
 				  continue;
 				}
@@ -99,7 +120,7 @@ var connectControllers = function() {
 		for (var j = 0; j < pods.items.length; j++) {
 			var pod = pods.items[j];
 			//console.log('connect service: ' + 'service-' + service.metadata.name + ' to pod-' + pod.metadata.name);
-			if (matchesLabelQuery(pod.metadata.labels, service.spec.selector)) {
+			if (isVisibleGroup(getNodeKey(pod)) && matchesLabelQuery(pod.metadata.labels, service.spec.selector)) {
 				instance.connect(
 					{
 						source: 'service-' + service.metadata.name,
@@ -138,7 +159,7 @@ var connectUses = function() {
 			if (podKey == key) {
 				$.each(list, function(j, serviceId) {
 			            //console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
-			            if   ($('#service-' + serviceId).length != 0 ){ 
+			            if   ( ($('#service-' + serviceId).length != 0) && ($('#pod-' + pod.metadata.name).length != 0) ){ 
 					instance.connect(
 					{
 						source: 'pod-' +  pod.metadata.name,
@@ -183,6 +204,7 @@ var makeGroupOrder = function() {
 				    groupScores[uses_label]++;
 				}
 			});
+                    groupScores[key]++;
 		} else {
 			if (!groupScores["no-service"]) {
 				groupScores["no-service"] = 1;
@@ -418,4 +440,3 @@ $( window ).resize(function() {
 	repainting = false;
 });	
   
-
