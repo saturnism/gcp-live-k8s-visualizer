@@ -290,7 +290,7 @@ var insertUse = function(name, use) {
 
 var loadData = function() {
   var deferred = new $.Deferred();
-  var req1 = $.getJSON("/api/v1/pods", function( data ) {
+  var req1 = $.getJSON("/api/v1/pods?labelSelector=visualize%3Dtrue", function( data ) {
     pods = data;
     $.each(data.items, function(key, val) {
       val.type = 'pod';
@@ -305,7 +305,7 @@ var loadData = function() {
     });
   });
 
-  var req2 = $.getJSON("/api/v1/replicationcontrollers", function( data ) {
+  var req2 = $.getJSON("/api/v1/replicationcontrollers?labelSelector=visualize%3Dtrue", function( data ) {
     controllers = data;
     $.each(data.items, function(key, val) {
       val.type = 'replicationController';
@@ -314,7 +314,7 @@ var loadData = function() {
   });
 
 
-  var req3 = $.getJSON("/api/v1/services", function( data ) {
+  var req3 = $.getJSON("/api/v1/services?labelSelector=visualize%3Dtrue", function( data ) {
     services = data;
     //console.log("loadData(): Services");
     //console.log(services);
