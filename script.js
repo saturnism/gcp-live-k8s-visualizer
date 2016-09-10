@@ -26,6 +26,17 @@ var truncate = function(str, width, left) {
 	}
 	return str;
 }
+function extractVersion(image){
+	var temp = image.split(":");
+	if(temp.length > 2){
+		return temp[2];
+	}
+	else if(temp.length > 1)
+	{
+		return temp[1];
+	}
+
+}
 
 var pods = [];
 var services = [];
@@ -191,7 +202,7 @@ var renderNodes = function() {
   $.each(nodes.items, function(index, value) {
     console.log(value);
 		var div = $('<div/>');
-    var ready = false;
+		var ready = 'not_ready';
     $.each(value.status.conditions, function(index, condition) {
       if (condition.type === 'Ready') {
         ready = (condition.status === 'True' ? 'ready' : 'not_ready' )
@@ -232,10 +243,13 @@ var renderGroups = function() {
       console.log(value);
       var phase = value.status.phase ? value.status.phase.toLowerCase() : '';
 			if (value.type == "pod") {
+        if ('deletionTimestamp' in value.metadata) {
+          phase = 'terminating';
+        }
 				eltDiv = $('<div class="window pod ' + phase + '" title="' + value.metadata.name + '" id="pod-' + value.metadata.name +
 					'" style="left: ' + (x + 250) + '; top: ' + (y + 160) + '"/>');
 				eltDiv.html('<span>' + 
-          truncate(value.metadata.name, 8, true) +
+          extractVersion(value.spec.containers[0].image) + " " + truncate(value.metadata.name, 8, true) +
           (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
           "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 6) : "None")  +")" +
           '</span>');
@@ -245,6 +259,7 @@ var renderGroups = function() {
 				eltDiv.html('<span>' + 
           value.metadata.name +
           (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
+      		(value.spec.externalIPs ? "<br/><br/>" + value.spec.externalIPs[0] + ":" +value.spec.ports[0].port : "") +
           (value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
           (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
           '</span>');
@@ -253,11 +268,11 @@ var renderGroups = function() {
         counts[key] = key in counts ? counts[key] + 1 : 0;
 				//eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
 				//	'" style="left: ' + (900 + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
-        var minLeft = 900;
+        var minLeft = 920;
         var calcLeft = 400 + (value.status.replicas * 130);
         var left = minLeft > calcLeft ? minLeft : calcLeft;
 				eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
-					'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
+					'" style="left: ' + (left) + '; top: ' + (y + 100) + '"/>');
 				eltDiv.html('<span>' + 
           value.metadata.name +
           (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
@@ -298,10 +313,10 @@ var loadData = function() {
     });
 	});
 
-	var req2 = $.getJSON("/api/v1/replicationcontrollers?labelSelector=visualize%3Dtrue", function( data ) {
+	var req2 = $.getJSON("/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue", function( data ) {
 		controllers = data;
 		$.each(data.items, function(key, val) {
-      val.type = 'replicationController';
+			val.type = 'deployment';
       //console.log("Controller ID = " + val.metadata.name)
     });
 	});
@@ -353,7 +368,7 @@ function refresh(instance) {
 
 		setTimeout(function() {
 			refresh(instance);
-		}, 2000);
+		}, 3000);
   });
 }
 
