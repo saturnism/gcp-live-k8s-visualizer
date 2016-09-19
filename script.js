@@ -67,7 +67,6 @@ var matchesLabelQuery = function(labels, selector) {
 }
 
 var connectControllers = function() {
-    connectUses();
 	for (var i = 0; i < controllers.items.length; i++) {
 		var controller = controllers.items[i];
     //console.log("controller: " + controller.metadata.name)
@@ -130,26 +129,26 @@ var connectUses = function() {
 		if (colorIx >= colors.length) { colorIx = 0;};
 		$.each(pods.items, function(i, pod) {
         var podKey = pod.metadata.labels.name;
-         //console.log('connect uses key: ' +key + ', ' + podKey);
+        //  console.log('connect uses key: ' +key + ', ' + podKey);
 			if (podKey == key) {
 				$.each(list, function(j, serviceId) {
-          //console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
+          // console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
 					jsPlumb.connect(
-					{
-						source: 'pod-' + pod.metadata.name,
-						target: 'service-' + serviceId,
-						endpoint: "Blank",
-						//anchors:["Bottom", "Top"],
-            anchors:[[ 0.5, 1, 0, 1, -30, 0 ], "Top"],
-						//connector: "Straight",
-            connector: ["Bezier", { curviness:75 }],
-						paintStyle:{lineWidth:2,strokeStyle:color},
-						overlays:[
-    						[ "Arrow", { width:15, length:30, location: 0.3}],
-    						[ "Arrow", { width:15, length:30, location: 0.6}],
-    						[ "Arrow", { width:15, length:30, location: 1}],
-    					],
-					});
+  					{
+  						source: 'pod-' + pod.metadata.name,
+  						target: 'service-' + serviceId,
+  						endpoint: "Blank",
+  						//anchors:["Bottom", "Top"],
+              anchors:[[ 0.5, 1, 0, 1, -30, 0 ], "Top"],
+  						//connector: "Straight",
+              connector: ["Bezier", { curviness:75 }],
+  						paintStyle:{lineWidth:2,strokeStyle:color},
+  						overlays:[
+      						[ "Arrow", { width:15, length:30, location: 0.3}],
+      						[ "Arrow", { width:15, length:30, location: 0.6}],
+      						[ "Arrow", { width:15, length:30, location: 1}],
+      					],
+  					});
 				});
 			}
 		});
@@ -194,7 +193,6 @@ var renderNodes = function() {
 	var y = 25;
 	var x = 100;
   $.each(nodes.items, function(index, value) {
-    console.log(value);
 		var div = $('<div/>');
     var ready = 'not_ready';
     $.each(value.status.conditions, function(index, condition) {
@@ -234,7 +232,6 @@ var renderGroups = function() {
 		$.each(list, function(index, value) {
       //console.log("render groups: " + value.type + ", " + value.metadata.name + ", " + index)
 			var eltDiv = null;
-      console.log(value);
       var phase = value.status.phase ? value.status.phase.toLowerCase() : '';
 			if (value.type == "pod") {
         if ('deletionTimestamp' in value.metadata) {
@@ -365,6 +362,7 @@ function refresh(instance) {
 		$('#sheet').empty();
     renderNodes();
 		renderGroups();
+    connectUses();
 		connectControllers();
 
 		setTimeout(function() {
