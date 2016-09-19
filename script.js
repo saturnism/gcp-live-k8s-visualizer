@@ -40,7 +40,7 @@ var insertByName = function(index, value) {
     return;
   }
   // console.log("type = " + value.type + " labels = " + value.metadata.name);
-  //	var list = groups[value.metadata.name];
+  // var list = groups[value.metadata.name];
   var key = value.metadata.labels.name;
 	var list = groups[key];
 	if (!list) {
@@ -54,6 +54,7 @@ var groupByName = function() {
 	$.each(pods.items, insertByName);
 	$.each(controllers.items, insertByName);
 	$.each(services.items, insertByName);
+  $.each(deployments.items, insertByName);
 };
 
 var matchesLabelQuery = function(labels, selector) {
@@ -64,6 +65,28 @@ var matchesLabelQuery = function(labels, selector) {
 		}
 	});
 	return match;
+}
+
+var connectDeployments = function() {
+  for (var i = 0; i < deployments.items.length; i++) {
+		var deployment = deployments.items[i];
+		for (var j = 0; j < pods.items.length; j++) {
+			var pod = pods.items[j];
+			if (pod.metadata.labels.name == deployment.metadata.labels.name) {
+        if (deployment.metadata.labels.version && pod.metadata.labels.version && (deployment.metadata.labels.version != pod.metadata.labels.version)) {
+          continue;
+        }
+				jsPlumb.connect({
+					source: 'deployment-' + deployment.metadata.name,
+					target: 'pod-' + pod.metadata.name,
+					anchors:["Bottom", "Bottom"],
+					paintStyle:{lineWidth:5,strokeStyle:'rgb(51,105,232)'},
+					joinStyle:"round",
+					endpointStyle:{ fillStyle: 'rgb(51,105,232)', radius: 7 },
+					connector: ["Flowchart", { cornerRadius:5 }]});
+			}
+		}
+	}
 }
 
 var connectControllers = function() {
@@ -88,6 +111,9 @@ var connectControllers = function() {
 			}
 		}
 	}
+}
+
+var connectServices = function() {
 	for (var i = 0; i < services.items.length; i++) {
 		var service = services.items[i];
     //            if (service.metadata.name == 'kubernetes' || service.metadata.name == 'skydns' || service.metadata.name == 'kubernetes-ro') { continue; }
@@ -230,10 +256,10 @@ var renderGroups = function() {
 		var div = $('<div/>');
 		var x = 100;
 		$.each(list, function(index, value) {
-      //console.log("render groups: " + value.type + ", " + value.metadata.name + ", " + index)
+      // console.log("render groups: " + value.type + ", " + value.metadata.name + ", " + index)
 			var eltDiv = null;
       var phase = value.status.phase ? value.status.phase.toLowerCase() : '';
-			if (value.type == "pod") {
+			if (value.type === "pod") {
         if ('deletionTimestamp' in value.metadata) {
           phase = 'terminating';
         }
@@ -244,7 +270,7 @@ var renderGroups = function() {
           (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
           "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 6) : "None")  +")" +
           '</span>');
-			} else if (value.type == "service") {
+			} else if (value.type === "service") {
 				eltDiv = $('<div class="window wide service ' + phase + '" title="' + value.metadata.name + '" id="service-' + value.metadata.name +
 					'" style="left: ' + 75 + '; top: ' + y + '"/>');
 				eltDiv.html('<span>' +
@@ -254,14 +280,18 @@ var renderGroups = function() {
           (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
           '</span>');
 			} else {
-        var key = 'controller-' + value.metadata.labels.name;
+        type = 'controller';
+        if (value.type === 'deployments') {
+          type = 'deployment';
+        }
+        var key = type + '-' + value.metadata.labels.name;
         counts[key] = key in counts ? counts[key] + 1 : 0;
 				//eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
 				//	'" style="left: ' + (900 + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
         var minLeft = 900;
         var calcLeft = 400 + (value.status.replicas * 130);
         var left = minLeft > calcLeft ? minLeft : calcLeft;
-				eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
+				eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="' + type + '-' + value.metadata.name +
 					'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
 				eltDiv.html('<span>' +
           value.metadata.name +
@@ -336,7 +366,6 @@ var loadData = function() {
 		deployments = data;
 		$.each(data.items, function(key, val) {
       val.type = 'deployments';
-      console.log("Deployment ID = " + val.metadata.name, val)
     });
 	});
 
@@ -362,8 +391,10 @@ function refresh(instance) {
 		$('#sheet').empty();
     renderNodes();
 		renderGroups();
-    connectUses();
+    connectDeployments();
 		connectControllers();
+    connectServices();
+    connectUses();
 
 		setTimeout(function() {
 			refresh(instance);
