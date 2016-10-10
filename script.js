@@ -211,7 +211,6 @@ var makeGroupOrder = function() {
 	});
   groupOrder.sort(function(a, b) { return groupScores[a] - groupScores[b]; });
 
-	//console.log(groupOrder);
   return groupOrder;
 };
 
@@ -223,7 +222,7 @@ var renderNodes = function() {
     var ready = 'not_ready';
     $.each(value.status.conditions, function(index, condition) {
       if (condition.type === 'Ready') {
-        ready = (condition.status === 'True' ? 'ready' : 'not_ready' )
+        ready = (condition.status === 'True' ? 'ready' : 'not_ready' );
       }
     });
 
@@ -263,11 +262,21 @@ var renderGroups = function() {
         if ('deletionTimestamp' in value.metadata) {
           phase = 'terminating';
         }
+        $.each(value.status.conditions, function(index, condition) {
+          if (condition.type === 'Ready' && condition.status === 'False') {
+            phase = 'pending'
+          }
+        });
+        // Get the last part of pod's id, which is unique.
+        var arr = /(\w+)-(\w+)-(\w+)/.exec(value.metadata.name);
+        var name = arr[3];
+
 				eltDiv = $('<div class="window pod ' + phase + '" title="' + value.metadata.name + '" id="pod-' + value.metadata.name +
 					'" style="left: ' + (x + 250) + '; top: ' + (y + 160) + '"/>');
-				eltDiv.html('<span>' +
-          truncate(value.metadata.name, 8, true) +
-          (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
+				eltDiv.html('<span>' + '..-' +
+          truncate(name, 8, true) +
+          // (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") +
+          "<br/><br/>" +
           "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 6) : "None")  +")" +
           '</span>');
 			} else if (value.type === "service") {
@@ -301,7 +310,7 @@ var renderGroups = function() {
 			div.append(eltDiv);
 			x += 130;
 		});
-		y += 400;
+		y += 300;
 		serviceLeft += 200;
 		elt.append(div);
 	});
@@ -344,8 +353,6 @@ var loadData = function() {
 
 	var req3 = $.getJSON("/api/v1/services?labelSelector=visualize%3Dtrue", function( data ) {
 		services = data;
-		//console.log("loadData(): Services");
-		//console.log(services);
 		$.each(data.items, function(key, val) {
       val.type = 'service';
       //console.log("service ID = " + val.metadata.name)
@@ -354,8 +361,6 @@ var loadData = function() {
 
 	var req4 = $.getJSON("/api/v1/nodes", function( data ) {
 		nodes = data;
-		//console.log("loadData(): Services");
-		//console.log(nodes);
 		$.each(data.items, function(key, val) {
       val.type = 'node';
       //console.log("service ID = " + val.metadata.name)
@@ -387,6 +392,7 @@ function refresh(instance) {
 
 
 	$.when(loadData()).then(function() {
+    console.log('refreshing...')
 		groupByName();
 		$('#sheet').empty();
     renderNodes();
