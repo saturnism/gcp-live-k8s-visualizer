@@ -259,14 +259,11 @@ var renderGroups = function() {
 			var eltDiv = null;
       var phase = value.status.phase ? value.status.phase.toLowerCase() : '';
 			if (value.type === "pod") {
-        if ('deletionTimestamp' in value.metadata) {
+        if (value.status.phase == 'Failed' || 'deletionTimestamp' in value.metadata) {
           phase = 'terminating';
+        } else if (value.status.phase == 'Pending') {
+          phase = 'pending'
         }
-        $.each(value.status.conditions, function(index, condition) {
-          if (condition.type === 'Ready' && condition.status === 'False') {
-            phase = 'pending'
-          }
-        });
         // Get the last part of pod's id, which is unique.
         var arr = /(\w+)-(\w+)-(\w+)/.exec(value.metadata.name);
         var name = arr[3];
