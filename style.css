@@ -17,6 +17,16 @@
   background-color:#eeeeef;
 }
 
+.pod-text {
+  font-size: 15px;
+  width: 100%;
+  text-align: center;
+}
+
+.node-name {
+  font-size: 12px;
+}
+
 .pending {
   background-color:yellow;
 }
