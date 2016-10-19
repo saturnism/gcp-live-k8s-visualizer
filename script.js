@@ -229,7 +229,7 @@ var renderNodes = function() {
  		var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
                  '" style="left: ' + (x + 250) + '; top: ' + y + '"/>');
 	  eltDiv.html('<span><b>Node</b><br/><br/>' +
-          truncate(value.metadata.name, 6) +
+          truncate(value.metadata.name, 5) +
           '</span>');
     div.append(eltDiv);
 
@@ -274,16 +274,17 @@ var renderGroups = function() {
           truncate(name, 8, true) +
           // (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") +
           "<br/><br/>" +
-          "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 6) : "None")  +")" +
+          "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 5) : "None")  +")" +
           '</span>');
 			} else if (value.type === "service") {
 				eltDiv = $('<div class="window wide service ' + phase + '" title="' + value.metadata.name + '" id="service-' + value.metadata.name +
 					'" style="left: ' + 75 + '; top: ' + y + '"/>');
 				eltDiv.html('<span>' +
           value.metadata.name +
-          (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") +
-          (value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
-          (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
+          ' service' +
+          // (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") +
+          // (value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
+          // (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
           '</span>');
 			} else {
         type = 'controller';
@@ -301,13 +302,13 @@ var renderGroups = function() {
 					'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
 				eltDiv.html('<span>' +
           value.metadata.name +
-          (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") +
+          // (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") +
           '</span>');
 			}
 			div.append(eltDiv);
 			x += 130;
 		});
-		y += 300;
+		y += 200;
 		serviceLeft += 200;
 		elt.append(div);
 	});

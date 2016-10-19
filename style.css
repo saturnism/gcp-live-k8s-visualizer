@@ -1,3 +1,4 @@
+
 .wide {
   width: 150px;
 }
@@ -7,14 +8,32 @@
   color: white;
 }
 
+.service span {
+  font-size: 1.7em;
+  line-height: 1.7em;
+}
+
 .controller {
   background-color:rgb(51,105,232);
   color: white;
 }
 
+.controller span {
+  font-size: 1.7em;
+  line-height: 1.7em;
+}
+
 .pod {
   width: 100px;
   background-color:#eeeeef;
+}
+
+.pod span {
+  font-size: 1.3em;
+}
+
+.node span {
+  font-size: 1.3em;
 }
 
 .pending {
