@@ -30,6 +30,7 @@ var truncate = function(str, width, left) {
 var pods = [];
 var services = [];
 var controllers = [];
+var deployments = [];
 var uses = {};
 
 var groups = {};
@@ -39,7 +40,7 @@ var insertByName = function(index, value) {
     return;
   }
   // console.log("type = " + value.type + " labels = " + value.metadata.name);
-  //	var list = groups[value.metadata.name];
+  // var list = groups[value.metadata.name];
   var key = value.metadata.labels.name;
 	var list = groups[key];
 	if (!list) {
@@ -53,6 +54,7 @@ var groupByName = function() {
 	$.each(pods.items, insertByName);
 	$.each(controllers.items, insertByName);
 	$.each(services.items, insertByName);
+  $.each(deployments.items, insertByName);
 };
 
 var matchesLabelQuery = function(labels, selector) {
@@ -65,8 +67,29 @@ var matchesLabelQuery = function(labels, selector) {
 	return match;
 }
 
+var connectDeployments = function() {
+  for (var i = 0; i < deployments.items.length; i++) {
+		var deployment = deployments.items[i];
+		for (var j = 0; j < pods.items.length; j++) {
+			var pod = pods.items[j];
+			if (pod.metadata.labels.name == deployment.metadata.labels.name) {
+        if (deployment.metadata.labels.version && pod.metadata.labels.version && (deployment.metadata.labels.version != pod.metadata.labels.version)) {
+          continue;
+        }
+				jsPlumb.connect({
+					source: 'deployment-' + deployment.metadata.name,
+					target: 'pod-' + pod.metadata.name,
+					anchors:["Bottom", "Bottom"],
+					paintStyle:{lineWidth:5,strokeStyle:'rgb(51,105,232)'},
+					joinStyle:"round",
+					endpointStyle:{ fillStyle: 'rgb(51,105,232)', radius: 7 },
+					connector: ["Flowchart", { cornerRadius:5 }]});
+			}
+		}
+	}
+}
+
 var connectControllers = function() {
-    connectUses();
 	for (var i = 0; i < controllers.items.length; i++) {
 		var controller = controllers.items[i];
     //console.log("controller: " + controller.metadata.name)
@@ -88,6 +111,9 @@ var connectControllers = function() {
 			}
 		}
 	}
+}
+
+var connectServices = function() {
 	for (var i = 0; i < services.items.length; i++) {
 		var service = services.items[i];
     //            if (service.metadata.name == 'kubernetes' || service.metadata.name == 'skydns' || service.metadata.name == 'kubernetes-ro') { continue; }
@@ -129,26 +155,26 @@ var connectUses = function() {
 		if (colorIx >= colors.length) { colorIx = 0;};
 		$.each(pods.items, function(i, pod) {
         var podKey = pod.metadata.labels.name;
-         //console.log('connect uses key: ' +key + ', ' + podKey);
+        //  console.log('connect uses key: ' +key + ', ' + podKey);
 			if (podKey == key) {
 				$.each(list, function(j, serviceId) {
-          //console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
+          // console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
 					jsPlumb.connect(
-					{
-						source: 'pod-' + pod.metadata.name,
-						target: 'service-' + serviceId,
-						endpoint: "Blank",
-						//anchors:["Bottom", "Top"],
-            anchors:[[ 0.5, 1, 0, 1, -30, 0 ], "Top"],
-						//connector: "Straight",
-            connector: ["Bezier", { curviness:75 }],
-						paintStyle:{lineWidth:2,strokeStyle:color},
-						overlays:[
-    						[ "Arrow", { width:15, length:30, location: 0.3}],
-    						[ "Arrow", { width:15, length:30, location: 0.6}],
-    						[ "Arrow", { width:15, length:30, location: 1}],
-    					],
-					});
+  					{
+  						source: 'pod-' + pod.metadata.name,
+  						target: 'service-' + serviceId,
+  						endpoint: "Blank",
+  						//anchors:["Bottom", "Top"],
+              anchors:[[ 0.5, 1, 0, 1, -30, 0 ], "Top"],
+  						//connector: "Straight",
+              connector: ["Bezier", { curviness:75 }],
+  						paintStyle:{lineWidth:2,strokeStyle:color},
+  						overlays:[
+      						[ "Arrow", { width:15, length:30, location: 0.3}],
+      						[ "Arrow", { width:15, length:30, location: 0.6}],
+      						[ "Arrow", { width:15, length:30, location: 1}],
+      					],
+  					});
 				});
 			}
 		});
@@ -185,31 +211,32 @@ var makeGroupOrder = function() {
 	});
   groupOrder.sort(function(a, b) { return groupScores[a] - groupScores[b]; });
 
-	//console.log(groupOrder);
   return groupOrder;
 };
 
 var renderNodes = function() {
-	var y = 25;
-	var x = 100;
+  var elt = $('.nodesbar');
+  var y = 25;
+  var x = 100;
+
+  elt.empty();
+
   $.each(nodes.items, function(index, value) {
-    console.log(value);
 		var div = $('<div/>');
     var ready = 'not_ready';
     $.each(value.status.conditions, function(index, condition) {
       if (condition.type === 'Ready') {
-        ready = (condition.status === 'True' ? 'ready' : 'not_ready' )
+        ready = (condition.status === 'True' ? 'ready' : 'not_ready' );
       }
     });
 
  		var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
                  '" style="left: ' + (x + 250) + '; top: ' + y + '"/>');
-	  eltDiv.html('<span><b>Node</b><br/><br/>' + 
-          truncate(value.metadata.name, 6) +
+	  eltDiv.html('<span><b>Node</b><br/><br/>' +
+          truncate(value.metadata.name, 5) +
           '</span>');
     div.append(eltDiv);
 
-	  var elt = $('.nodesbar');
 		elt.append(div);
 
     x += 120;
@@ -221,7 +248,7 @@ var renderGroups = function() {
 	var y = 10;
 	var serviceLeft = 0;
 	var groupOrder = makeGroupOrder();
-  var counts = {} 
+  var counts = {}
 	$.each(groupOrder, function(ix, key) {
 		list = groups[key];
 		// list = value;
@@ -231,49 +258,60 @@ var renderGroups = function() {
 		var div = $('<div/>');
 		var x = 100;
 		$.each(list, function(index, value) {
-      //console.log("render groups: " + value.type + ", " + value.metadata.name + ", " + index)
+      // console.log("render groups: " + value.type + ", " + value.metadata.name + ", " + index)
 			var eltDiv = null;
-      console.log(value);
       var phase = value.status.phase ? value.status.phase.toLowerCase() : '';
-			if (value.type == "pod") {
-        if ('deletionTimestamp' in value.metadata) {
+			if (value.type === "pod") {
+        if (value.status.phase == 'Failed' || 'deletionTimestamp' in value.metadata) {
           phase = 'terminating';
+        } else if (value.status.phase == 'Pending') {
+          phase = 'pending'
         }
+        // Get the last part of pod's id, which is unique.
+        var arr = /(\w+)-(\w+)-(\w+)/.exec(value.metadata.name);
+        var name = arr[3];
+
 				eltDiv = $('<div class="window pod ' + phase + '" title="' + value.metadata.name + '" id="pod-' + value.metadata.name +
 					'" style="left: ' + (x + 250) + '; top: ' + (y + 160) + '"/>');
-				eltDiv.html('<span>' + 
-          truncate(value.metadata.name, 8, true) +
-          (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
-          "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 6) : "None")  +")" +
+				eltDiv.html('<span>' + '..-' +
+          truncate(name, 8, true) +
+          // (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") +
+          "<br/><br/>" +
+          "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 5) : "None")  +")" +
           '</span>');
-			} else if (value.type == "service") {
+			} else if (value.type === "service") {
 				eltDiv = $('<div class="window wide service ' + phase + '" title="' + value.metadata.name + '" id="service-' + value.metadata.name +
 					'" style="left: ' + 75 + '; top: ' + y + '"/>');
-				eltDiv.html('<span>' + 
+				eltDiv.html('<span>' +
           value.metadata.name +
-          (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
-          (value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
-          (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
+          ' service' +
+          // (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") +
+          // (value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
+          // (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
           '</span>');
 			} else {
-        var key = 'controller-' + value.metadata.labels.name;
+        type = 'controller';
+        if (value.type === 'deployments') {
+          type = 'deployment';
+        }
+        var key = type + '-' + value.metadata.labels.name;
         counts[key] = key in counts ? counts[key] + 1 : 0;
 				//eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
 				//	'" style="left: ' + (900 + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
         var minLeft = 900;
         var calcLeft = 400 + (value.status.replicas * 130);
         var left = minLeft > calcLeft ? minLeft : calcLeft;
-				eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
+				eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="' + type + '-' + value.metadata.name +
 					'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
-				eltDiv.html('<span>' + 
+				eltDiv.html('<span>' +
           value.metadata.name +
-          (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
+          // (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") +
           '</span>');
 			}
 			div.append(eltDiv);
 			x += 130;
 		});
-		y += 400;
+		y += 200;
 		serviceLeft += 200;
 		elt.append(div);
 	});
@@ -316,8 +354,6 @@ var loadData = function() {
 
 	var req3 = $.getJSON("/api/v1/services?labelSelector=visualize%3Dtrue", function( data ) {
 		services = data;
-		//console.log("loadData(): Services");
-		//console.log(services);
 		$.each(data.items, function(key, val) {
       val.type = 'service';
       //console.log("service ID = " + val.metadata.name)
@@ -326,18 +362,22 @@ var loadData = function() {
 
 	var req4 = $.getJSON("/api/v1/nodes", function( data ) {
 		nodes = data;
-		//console.log("loadData(): Services");
-		//console.log(nodes);
 		$.each(data.items, function(key, val) {
       val.type = 'node';
       //console.log("service ID = " + val.metadata.name)
     });
 	});
 
-	$.when(req1, req2, req3, req4).then(function() {
-		deferred.resolve();
+  var req5 = $.getJSON("/apis/extensions/v1beta1/deployments?labelSelector=visualize%3Dtrue", function( data ) {
+		deployments = data;
+		$.each(data.items, function(key, val) {
+      val.type = 'deployments';
+    });
 	});
 
+	$.when(req1, req2, req3, req4, req5).then(function() {
+		deferred.resolve();
+	});
 
 	return deferred;
 }
@@ -346,21 +386,26 @@ function refresh(instance) {
 	pods = [];
 	services = [];
 	controllers = [];
+  deployments = [];
   nodes = [];
 	uses = {};
 	groups = {};
 
 
 	$.when(loadData()).then(function() {
+    console.log('refreshing...')
 		groupByName();
 		$('#sheet').empty();
     renderNodes();
 		renderGroups();
+    connectDeployments();
 		connectControllers();
+    connectServices();
+    connectUses();
 
 		setTimeout(function() {
 			refresh(instance);
-		}, 2000);
+		}, 250);
   });
 }
 
