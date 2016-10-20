@@ -215,8 +215,12 @@ var makeGroupOrder = function() {
 };
 
 var renderNodes = function() {
-	var y = 25;
-	var x = 100;
+  var elt = $('.nodesbar');
+  var y = 25;
+  var x = 100;
+
+  elt.empty();
+
   $.each(nodes.items, function(index, value) {
 		var div = $('<div/>');
     var ready = 'not_ready';
@@ -233,7 +237,6 @@ var renderNodes = function() {
           '</span>');
     div.append(eltDiv);
 
-	  var elt = $('.nodesbar');
 		elt.append(div);
 
     x += 120;
@@ -402,7 +405,7 @@ function refresh(instance) {
 
 		setTimeout(function() {
 			refresh(instance);
-		}, 2000);
+		}, 250);
   });
 }
 
