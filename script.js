@@ -13,6 +13,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
+console.log(window.location.search);
+// var namespace = decodeURIComponent(window.location.search.match(/(\?|&)namespace\=([^&]*)/)[2]);
+var searchparams = new URLSearchParams(window.location.search);
+var namespace = searchparams.has('namespace')?searchparams.get('namespace'):"default";
+console.log("Namespace: "+namespace);
 
 var truncate = function (str, width, left) {
     if (!str) return "";
@@ -218,7 +223,7 @@ var renderNodes = function () {
         });
 
         var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
-            '" style="left: ' + (x + 250) + '; top: ' + y + '"/>');
+            '" style="left: ' + (x) + '; top: ' + y + '"/>');
         eltDiv.html('<span><b>Node</b><br/><br/><p class="node-name">' +
             truncate(value.metadata.name, 15) +
             '</p></span>');
@@ -306,7 +311,7 @@ var insertUse = function (name, use) {
 
 var loadData = function () {
     var deferred = new $.Deferred();
-    var req1 = $.getJSON("/api/v1/pods?labelSelector=visualize%3Dtrue", function (data) {
+    var req1 = $.getJSON("/api/v1/namespaces/"+namespace+"/pods?labelSelector=visualize%3Dtrue", function (data) {
         pods = data;
         $.each(data.items, function (key, val) {
             val.type = 'pod';
@@ -323,7 +328,7 @@ var loadData = function () {
         });
     });
 
-    var req2 = $.getJSON("/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue", function (data) {
+    var req2 = $.getJSON("/apis/extensions/v1beta1/namespaces/"+namespace+"/deployments/?labelSelector=visualize%3Dtrue", function (data) {
         controllers = data;
         $.each(data.items, function (key, val) {
             val.type = 'deployment';
@@ -332,7 +337,7 @@ var loadData = function () {
     });
 
 
-    var req3 = $.getJSON("/api/v1/services?labelSelector=visualize%3Dtrue", function (data) {
+    var req3 = $.getJSON("/api/v1/namespaces/"+namespace+"/services?labelSelector=visualize%3Dtrue", function (data) {
         services = data;
         //console.log("loadData(): Services");
         //console.log(services);
@@ -402,3 +407,4 @@ jsPlumb.bind("ready", function () {
     refresh(instance);
     jsPlumb.fire("jsPlumbDemoLoaded", instance);
 });
+
