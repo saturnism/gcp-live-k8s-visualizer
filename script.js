@@ -30,6 +30,7 @@ var truncate = function(str, width, left) {
 var pods = [];
 var services = [];
 var controllers = [];
+var replicasets = [];
 var deployments = [];
 var uses = {};
 
@@ -54,6 +55,10 @@ var groupByName = function() {
 
 	if (controllers.items) {
 		$.each(controllers.items, insertByName);
+	}
+
+	if (replicasets.items) {
+		$.each(replicasets.items, insertByName);
 	}
 
 	if (deployments.items) {
@@ -97,6 +102,27 @@ var connectControllers = function() {
 	}
 }
 
+var connectReplicasets = function() {
+	if (!replicasets.items) return;
+
+	for (var i = 0; i < replicasets.items.length; i++) {
+		var replicaset = replicasets.items[i];
+		for (var j = 0; j < pods.items.length; j++) {
+			var pod = pods.items[j];
+			if (matchesLabelQuery(pod.metadata.labels, replicaset.spec.selector.matchLabels)) {
+				jsPlumb.connect({
+					source: 'controller-' + replicaset.metadata.name,
+					target: 'pod-' + pod.metadata.name,
+					anchors:["Bottom", "Bottom"],
+					paintStyle:{lineWidth:5,strokeStyle:'rgb(51,105,232)'},
+					joinStyle:"round",
+					endpointStyle:{ fillStyle: 'rgb(51,105,232)', radius: 7 },
+					connector: ["Flowchart", { cornerRadius:5 }]});
+			}
+		}
+	}
+}
+
 var connectDeployments = function() {
 	if (!deployments.items) return;
 
@@ -125,6 +151,8 @@ var connectServices = function() {
 		var service = services.items[i];
 		for (var j = 0; j < pods.items.length; j++) {
 			var pod = pods.items[j];
+			if (!service.spec.selector) continue;
+
 			if (matchesLabelQuery(pod.metadata.labels, service.spec.selector)) {
 				jsPlumb.connect(
 					{
@@ -142,6 +170,7 @@ var connectServices = function() {
 var connectEverything = function() {
   connectUses();
   connectControllers();
+  connectReplicasets();
   connectDeployments();
   connectServices();
 };
@@ -386,7 +415,16 @@ var loadData = function() {
     });
 	});
 
-	$.when(req1, req2, req3, req4, req5).then(function() {
+	var req6 = $.getJSON("/apis/extensions/v1beta1/namespaces/default/replicasets?labelSelector=visualize%3Dtrue", function( data ) {
+		replicasets = data;
+        if (!data.items) return;
+
+		$.each(data.items, function(key, val) {
+			val.type = 'replicaset';
+		});
+	});
+
+	$.when(req1, req2, req3, req4, req5, req6).then(function() {
 		deferred.resolve();
 	});
 
@@ -398,8 +436,9 @@ function refresh(instance) {
 	pods = [];
 	services = [];
 	controllers = [];
-  deployments = [];
-  nodes = [];
+	replicasets = [];
+	deployments = [];
+	nodes = [];
 	uses = {};
 	groups = {};
 
