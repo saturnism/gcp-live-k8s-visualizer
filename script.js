@@ -39,12 +39,13 @@ function extractVersion(image) {
     else if (temp.length > 1) {
         return temp[1];
     }
-
+    return ""
 }
 
 var pods = [];
 var services = [];
 var controllers = [];
+var statefulsets = [];
 var uses = {};
 
 var groups = {};
@@ -62,9 +63,11 @@ var insertByName = function (index, value) {
     list.push(value);
 };
 
+
 var groupByName = function () {
     $.each(pods.items, insertByName);
     $.each(controllers.items, insertByName);
+    $.each(statefulsets.items, insertByName);
     $.each(services.items, insertByName);
 };
 
@@ -73,6 +76,16 @@ var matchesLabelQuery = function (labels, selector) {
     $.each(selector, function (key, value) {
         if (labels[key] != value) {
             match = false;
+        }
+    });
+    return match;
+}
+
+var serviceExists = function (name) {
+    var match = false;
+    $.each(services.items, function (index, service) {
+        if (service.metadata.name === name) {
+            match = true;
         }
     });
     return match;
@@ -90,6 +103,26 @@ var connectControllers = function () {
                 }
                 jsPlumb.connect({
                     source: 'controller-' + controller.metadata.name,
+                    target: 'pod-' + pod.metadata.name,
+                    anchors: ["Bottom", "Bottom"],
+                    paintStyle: {lineWidth: 5, strokeStyle: 'rgb(51,105,232)'},
+                    joinStyle: "round",
+                    endpointStyle: {fillStyle: 'rgb(51,105,232)', radius: 7},
+                    connector: ["Flowchart", {cornerRadius: 5}]
+                });
+            }
+        }
+    }
+    for (var i = 0; i < statefulsets.items.length; i++) {
+        var statefulset = statefulsets.items[i];
+        for (var j = 0; j < pods.items.length; j++) {
+            var pod = pods.items[j];
+            if (pod.metadata.labels.run == statefulset.metadata.labels.run) {
+                if (statefulset.metadata.labels.version && pod.metadata.labels.version && (statefulset.metadata.labels.version != pod.metadata.labels.version)) {
+                    continue;
+                }
+                jsPlumb.connect({
+                    source: 'controller-' + statefulset.metadata.name,
                     target: 'pod-' + pod.metadata.name,
                     anchors: ["Bottom", "Bottom"],
                     paintStyle: {lineWidth: 5, strokeStyle: 'rgb(51,105,232)'},
@@ -147,26 +180,28 @@ var connectUses = function () {
         ;
         $.each(pods.items, function (i, pod) {
             var podKey = pod.metadata.labels.run;
-            //console.log('connect uses key: ' +key + ', ' + podKey);
+            // console.log('connect uses key: ' +key + ', ' + podKey);
             if (podKey == key) {
                 $.each(list, function (j, serviceId) {
-                    //console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
-                    jsPlumb.connect(
-                        {
-                            source: 'pod-' + pod.metadata.name,
-                            target: 'service-' + serviceId,
-                            endpoint: "Blank",
-                            //anchors:["Bottom", "Top"],
-                            anchors: [[0.5, 1, 0, 1, -30, 0], "Top"],
-                            //connector: "Straight",
-                            connector: ["Bezier", {curviness: 75}],
-                            paintStyle: {lineWidth: 2, strokeStyle: color},
-                            overlays: [
-                                ["Arrow", {width: 15, length: 30, location: 0.3}],
-                                ["Arrow", {width: 15, length: 30, location: 0.6}],
-                                ["Arrow", {width: 15, length: 30, location: 1}],
-                            ],
-                        });
+                    console.log('connect: ' + 'pod-' + pod.metadata.name + ' to service-' + serviceId);
+                    if (serviceExists(serviceId)) {
+                        jsPlumb.connect(
+                            {
+                                source: 'pod-' + pod.metadata.name,
+                                target: 'service-' + serviceId,
+                                endpoint: "Blank",
+                                //anchors:["Bottom", "Top"],
+                                anchors: [[0.5, 1, 0, 1, -30, 0], "Top"],
+                                //connector: "Straight",
+                                connector: ["Bezier", {curviness: 75}],
+                                paintStyle: {lineWidth: 2, strokeStyle: color},
+                                overlays: [
+                                    ["Arrow", {width: 15, length: 30, location: 0.3}],
+                                    ["Arrow", {width: 15, length: 30, location: 0.6}],
+                                    ["Arrow", {width: 15, length: 30, location: 1}],
+                                ],
+                            });
+                    }
                 });
             }
         });
@@ -225,7 +260,7 @@ var renderNodes = function () {
         var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
             '" style="left: ' + (x) + '; top: ' + y + '"/>');
         eltDiv.html('<span><b>Node</b><br/><br/><p class="node-name">' +
-            truncate(value.metadata.name, 15) +
+            truncate(value.metadata.name, 10) +
             '</p></span>');
         div.append(eltDiv);
 
@@ -255,8 +290,14 @@ var renderGroups = function () {
             var eltDiv = null;
             console.log(value);
             var phase = value.status.phase ? value.status.phase.toLowerCase() : '';
+
             if (value.type == "pod") {
                 num_pods++;
+                $.each(value.status.conditions, function (index, condition) {
+                    if (condition.type === 'Ready' && condition.status != 'True') {
+                        phase = 'not_ready'
+                    }
+                });
                 if ('deletionTimestamp' in value.metadata) {
                     phase = 'terminating';
                 }
@@ -266,7 +307,7 @@ var renderGroups = function () {
                     extractVersion(value.spec.containers[0].image) +
                     "<br/><b>" + truncate(value.metadata.name, 12, true) + "</b>" +
                     (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
-                    "<p class='node-name'>(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 15) : "None") + ")</p>" +
+                    "<p class='node-name'>(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 10) : "None") + ")</p>" +
                     '</span>');
             } else if (value.type == "service") {
                 eltDiv = $('<div class="window wide service ' + phase + '" title="' + value.metadata.name + '" id="service-' + value.metadata.name +
@@ -313,6 +354,9 @@ var loadData = function () {
     var deferred = new $.Deferred();
     var req1 = $.getJSON("/api/v1/namespaces/"+namespace+"/pods?labelSelector=visualize%3Dtrue", function (data) {
         pods = data;
+        if (data.items == undefined || data.items == null) {
+            data.items = [];
+        }
         $.each(data.items, function (key, val) {
             val.type = 'pod';
             if (val.metadata.labels && val.metadata.labels.uses) {
@@ -330,6 +374,9 @@ var loadData = function () {
 
     var req2 = $.getJSON("/apis/extensions/v1beta1/namespaces/"+namespace+"/deployments/?labelSelector=visualize%3Dtrue", function (data) {
         controllers = data;
+        if (data.items == undefined || data.items == null) {
+            data.items = [];
+        }
         $.each(data.items, function (key, val) {
             val.type = 'deployment';
             //console.log("Controller ID = " + val.metadata.name)
@@ -337,10 +384,24 @@ var loadData = function () {
     });
 
 
+    var reqss = $.getJSON("/apis/apps/v1beta1/namespaces/"+namespace+"/statefulsets/?labelSelector=visualize%3Dtrue", function (data) {
+        statefulsets = data;
+        if (data.items == undefined || data.items == null) {
+            data.items = [];
+        }
+            $.each(data.items, function (key, val) {
+                val.type = 'statefulset';
+                //console.log("Controller ID = " + val.metadata.name)
+            });
+    });
+
     var req3 = $.getJSON("/api/v1/namespaces/"+namespace+"/services?labelSelector=visualize%3Dtrue", function (data) {
         services = data;
         //console.log("loadData(): Services");
         //console.log(services);
+        if (data.items == undefined || data.items == null) {
+            data.items = [];
+        }
         $.each(data.items, function (key, val) {
             val.type = 'service';
             //console.log("service ID = " + val.metadata.name)
@@ -351,13 +412,16 @@ var loadData = function () {
         nodes = data;
         //console.log("loadData(): Services");
         //console.log(nodes);
+        if (data.items == undefined || data.items == null) {
+            data.items = [];
+        }
         $.each(data.items, function (key, val) {
             val.type = 'node';
             //console.log("service ID = " + val.metadata.name)
         });
     });
 
-    $.when(req1, req2, req3, req4).then(function () {
+    $.when(req1, req2, reqss, req3, req4).then(function () {
         deferred.resolve();
     });
 
@@ -383,7 +447,7 @@ function refresh(instance) {
 
         setTimeout(function () {
             refresh(instance);
-        }, 3000);
+        }, 5000);
     });
 }
 

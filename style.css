@@ -85,3 +85,7 @@
 .terminating {
   background-color: red;
 }
+
+.waiting {
+  background-color: red;
+}
